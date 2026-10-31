@@ -1,0 +1,409 @@
+{
+  "name": "code-flow-canvas",
+  "displayName": "Code Flow Canvas",
+  "description": "Python codebase as a live node canvas",
+  "version": "0.2.1",
+  "publisher": "local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/*.py",
+    "onFileSystem:codeflow"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeflow.open",
+        "title": "Code Flow: Open Canvas"
+      },
+      {
+        "command": "codeflow.reanalyse",
+        "title": "Code Flow: Re-analyse"
+      },
+      {
+        "command": "codeflow.traceLaunch",
+        "title": "Code Flow: Trace Launch Config..."
+      },
+      {
+        "command": "codeflow.traceTests",
+        "title": "Code Flow: Trace Tests"
+      },
+      {
+        "command": "codeflow.attach",
+        "title": "Code Flow: Attach Tracer..."
+      },
+      {
+        "command": "codeflow.stopTrace",
+        "title": "Code Flow: Stop Trace"
+      },
+      {
+        "command": "codeflow.exportLayout",
+        "title": "Code Flow: Export Layout"
+      },
+      {
+        "command": "codeflow.importLayout",
+        "title": "Code Flow: Import Layout"
+      },
+      {
+        "command": "codeflow.resetLayout",
+        "title": "Code Flow: Reset Layout"
+      },
+      {
+        "command": "codeflow.relayout",
+        "title": "Code Flow: Re-layout"
+      },
+      {
+        "command": "codeflow.detach",
+        "title": "Code Flow: Open Canvas in New Window"
+      },
+      {
+        "command": "codeflow.followForward",
+        "title": "Follow Forward on Code Flow"
+      },
+      {
+        "command": "codeflow.followBackward",
+        "title": "Follow Backward on Code Flow"
+      },
+      {
+        "command": "codeflow.followForwardFile",
+        "title": "Follow Forward on Code Flow"
+      },
+      {
+        "command": "codeflow.followBackwardFile",
+        "title": "Follow Backward on Code Flow"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeflow",
+          "title": "Code Flow",
+          "icon": "media/codeflow.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeflow": [
+        {
+          "id": "codeflow.home",
+          "name": "Code Flow"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "codeflow.home",
+        "contents": "The canvas opens when you click this icon.\n[$(type-hierarchy) Open Canvas](command:codeflow.open)\n[$(link-external) Open in New Window](command:codeflow.detach)\n[$(beaker) Trace Tests](command:codeflow.traceTests)\n[$(debug-alt) Trace Launch Config…](command:codeflow.traceLaunch)\nRight-click a function in the editor or a .py file in the Explorer for Follow Forward / Follow Backward."
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codeflow.followForward",
+          "when": "editorLangId == python && resourceScheme == file",
+          "group": "codeflow@1"
+        },
+        {
+          "command": "codeflow.followBackward",
+          "when": "editorLangId == python && resourceScheme == file",
+          "group": "codeflow@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "codeflow.followForwardFile",
+          "when": "resourceExtname == .py",
+          "group": "codeflow@1"
+        },
+        {
+          "command": "codeflow.followBackwardFile",
+          "when": "resourceExtname == .py",
+          "group": "codeflow@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codeflow.followForward",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "codeflow.followBackward",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "codeflow.followForwardFile",
+          "when": "false"
+        },
+        {
+          "command": "codeflow.followBackwardFile",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Code Flow Canvas",
+      "properties": {
+        "codeflow.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Python interpreter. Empty = the workspace .venv / venv / env, then the Python extension's selection, then py -3 / python3."
+        },
+        "codeflow.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.venv/**",
+            "**/venv/**",
+            "**/node_modules/**",
+            "**/site-packages/**",
+            "**/__pycache__/**"
+          ],
+          "description": "Glob patterns excluded from analysis."
+        },
+        "codeflow.ignoreLibraryConnections": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide wires to/from third-party and stdlib code."
+        },
+        "codeflow.levelMode": {
+          "type": "string",
+          "enum": [
+            "relative",
+            "fixed"
+          ],
+          "default": "relative",
+          "enumDescriptions": [
+            "Levels are relative to the selected node: its args/return = 1, its calls = 2/3. No selection: caller's level.",
+            "Each wire has one level (caller's view) regardless of selection."
+          ],
+          "description": "How wire levels are evaluated by the level filters."
+        },
+        "codeflow.nestSingleUse": {
+          "type": "boolean",
+          "default": true,
+          "description": "Nest functions/lambdas/properties with a single call site inside their caller."
+        },
+        "codeflow.editorMode": {
+          "type": "string",
+          "enum": [
+            "virtual",
+            "file"
+          ],
+          "default": "virtual",
+          "enumDescriptions": [
+            "Double-click opens a tab containing only that function; saving writes back into the real file.",
+            "Double-click opens the real file with the function selected and everything else folded."
+          ],
+          "description": "How double-clicking a node opens its code."
+        },
+        "codeflow.collapseThreshold": {
+          "type": "number",
+          "default": 300,
+          "description": "Above this many function nodes, start in classes/modules-only view."
+        },
+        "codeflow.edgeThreshold": {
+          "type": "number",
+          "default": 300,
+          "description": "Above this many wires, wires-on-demand mode turns on automatically."
+        },
+        "codeflow.groupByFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Draw one area per file. Off: a flat left-to-right flow with classes as frames. Positions are kept separately for each mode."
+        },
+        "codeflow.anim.maxBalls": {
+          "type": "number",
+          "default": 30,
+          "minimum": 0,
+          "description": "Most ball animations in flight at once while tracing (0 = wires only flash). Extra steps on a busy wire add to its ×n counter."
+        },
+        "codeflow.log.maxEntries": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 100,
+          "description": "Entries kept in the canvas footer log (oldest dropped first)."
+        },
+        "codeflow.bridgeHidden": {
+          "type": "boolean",
+          "default": true,
+          "description": "When filters hide a node that sits between two shown ones (A calls hidden B, B calls C; or A's return value flows through B into C), draw a dashed \"via B\" wire from A to C so the flow stays readable."
+        },
+        "codeflow.log.showHidden": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log: also show calls of nodes the canvas currently hides (filters, focus, follow chain). Toggle in the log header."
+        },
+        "codeflow.colorScheme": {
+          "type": "string",
+          "enum": [
+            "vscode",
+            "n8n",
+            "comfy",
+            "high-contrast"
+          ],
+          "default": "vscode",
+          "enumDescriptions": [
+            "Follows the VS Code theme (switches to high-contrast in a high-contrast theme)",
+            "n8n-like dark palette",
+            "ComfyUI-like dark palette",
+            "Thick white wires, colour carries little"
+          ],
+          "description": "Colours of nodes, wires, ports and types on the canvas."
+        },
+        "codeflow.showGuideOnStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the one-page guide the first time the canvas opens."
+        },
+        "codeflow.follow.stepMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 50,
+          "description": "Follow mode: how long each step's ball animation takes. The traced program waits for it."
+        },
+        "codeflow.follow.scope": {
+          "type": "string",
+          "enum": [
+            "filtered",
+            "selected",
+            "all"
+          ],
+          "default": "filtered",
+          "enumDescriptions": [
+            "Only steps on nodes visible under the current filters pause",
+            "Only steps on the selected node and its direct neighbours pause",
+            "Every project call and return pauses"
+          ],
+          "description": "Follow mode: which steps the program waits on (the others run at full speed)."
+        },
+        "codeflow.follow.camera": {
+          "type": "string",
+          "enum": [
+            "pan",
+            "panZoom",
+            "off"
+          ],
+          "default": "pan",
+          "description": "Follow mode: move the camera with the ball (pan), also zoom in to it (panZoom), or leave it (off)."
+        },
+        "codeflow.pack": {
+          "type": "string",
+          "enum": [
+            "temporary",
+            "keep",
+            "off"
+          ],
+          "default": "temporary",
+          "enumDescriptions": [
+            "Pack the shown nodes until the filters / focus change; saved positions come back.",
+            "Pack the shown nodes and save those positions.",
+            "Never move nodes; only zoom to fit."
+          ],
+          "description": "Fit (with some nodes hidden) and Follow Forward / Backward move the shown nodes close together (callers left, callees right) before fitting the view."
+        },
+        "codeflow.intercept.timeoutSec": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "description": "A paused program (intercept or follow) continues on its own after this many seconds (0 = wait forever)."
+        },
+        "codeflow.wiresOnDemand": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide wires unless their node is selected or the wire is locked."
+        },
+        "codeflow.trace.valueDepth": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "description": "How many levels deep traced values are captured for the expandable value views."
+        },
+        "codeflow.trace.valueItems": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "description": "How many items of each list / dict / object are captured for the value views."
+        },
+        "codeflow.trace.maxValueLength": {
+          "type": "number",
+          "default": 200,
+          "description": "Max characters of a traced value repr."
+        },
+        "codeflow.trace.history": {
+          "type": "number",
+          "default": 1,
+          "description": "Values kept per wire."
+        },
+        "codeflow.trace.flushMs": {
+          "type": "number",
+          "default": 50,
+          "description": "Tracer event batch interval (ms)."
+        },
+        "codeflow.trace.glowMs": {
+          "type": "number",
+          "default": 600,
+          "description": "Node glow / wire pulse duration (ms)."
+        },
+        "codeflow.trace.globals": {
+          "type": "boolean",
+          "default": false,
+          "description": "Trace global variable writes."
+        },
+        "codeflow.trace.persistValues": {
+          "type": "boolean",
+          "default": false,
+          "description": "Keep last trace values across sessions (stored in workspace state, not the layout file)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build:ext": "node esbuild.mjs",
+    "build:web": "vite build --config webview/vite.config.mts",
+    "build": "npm run build:ext && npm run build:web",
+    "watch:ext": "node esbuild.mjs --watch",
+    "typecheck": "tsc -p . --noEmit && tsc -p webview --noEmit",
+    "test:unit": "vitest run",
+    "test:py": "python/run_tests.cmd",
+    "test:e2e": "npm run build && node test/e2e/runTests.mjs",
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --skip-license"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.46-24",
+    "@vscode/python-extension": "^1.0.6",
+    "@xyflow/react": "^12.12.0",
+    "elkjs": "^0.12.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/vscode": "^1.95.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.0",
+    "esbuild": "^0.28.2",
+    "mocha": "^12.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HEchternacht/eex-ext"
+  }
+}

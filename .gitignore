@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+.vscode-test/
+*.vsix
+__pycache__/
+.pytest_cache/
+sample/.venv/
+sample/.vscode/
+.claude/
+REQUEST.md
+IMPLEMENTATION_PLAN.md
+Implementation_planv1_1.md
+UIX_RESEARCH.md
